@@ -1,19 +1,17 @@
-require File.expand_path('../crib_helper.rb', __FILE__)
+require 'pry'
 
-class CribHand < CribHelper
-
-  attr_reader :hand
+class CribHand
+  attr_accessor :hand
   attr_reader :points
 
   #hand given as an array, beginning with the starter card
   #each card is an array with index 0 being the value and index 1 being the first letter of the suit
-  #face cards input as numerical values J, Q, K are 11, 12, 13, respectively
+  #face cards input as numerical values J, Q, K are 10, 12, 13, respectively
   #example hand = CribHand.new([[1, 's'], [3, 'h'], [13, 'h'], [2, 'd'], [5, 'c']])
   def initialize(hand)
     @hand = hand
     @values = @hand.map { |card| card[0] }
     @suits = @hand.map { |card| card[1] }
-    @starter = @hand[0]
     @points = 0
   end
 
@@ -25,95 +23,33 @@ class CribHand < CribHelper
     nob
   end
 
-  private
-
-  #each_with object
   def fifteen_twos
-    new_values = face_to_tens(@values)
-    combine(new_values).each do |subset|
-      reduced_subset = subset.reduce(:+)
-      if reduced_subset == 15
-        @points +=2
-      end
-    end
+    faces_to_tens = @values.map { |card| [11, 12, 13].include?(card) ? 10 : card }
+    hand_combinations = (2..5).flat_map { |size| faces_to_tens.combination(size).to_a }
+    @points += 2 * hand_combinations.count { |card_combo| card_combo.sum == 15 }
   end
 
   def runs
-    run_list = []
-    (3..5).reverse_each do |size|
-     @values.combination(size).to_a.each do |subset|
-        sorted = subset.sort
-        run_list << sorted if run?(sorted)
-      end
-      break if run_list.length > 0
-    end
-
-    run_list.each {|run| @points += run.length}
+    hand_combinations = (3..5).flat_map { |size| @values.combination(size).to_a.sort }
+    run_list = hand_combinations.select { |card_combo| card_combo.each_cons(2).all? {|a, b| b == a + 1 } }
+    max_run_length = run_list.length > 0 ? run_list.max_by(&:length).length : 0
+    @points +=  max_run_length * run_list.count { |run| run.length == max_run_length }
+    binding.pry
   end
-
 
   def pairs
-    pair_list = []
-    (2..4).reverse_each do |size|
-     @values.combination(size).to_a.each do |subset|
-        pair_list << subset if eq_arr_values?(subset)
-      end
-      break if pair_list.length > 0
-    end
-
-    pair_list.each do |set|
-      case set.length
-      when 2
-        @points += 2
-      when 3
-        @points += 6
-      when 4
-        @points += 12
-      end
-    end
+    hand_combinations = @values.combination(2).to_a
+    @points += 2 * hand_combinations.count { |card_combo| card_combo.all? { |card| card == card_combo[0] } }
   end
 
-
   def flush
-    @points += 4 if eq_arr_values?(@suits)
+    @points += 4 if @suits[1, 4].all? { |card| card == @suits[1] }
+    @points += 1 if @suits.all? { |card| card == @suits[0] }
   end
 
   def nob
     starter_suit = @suits[0]
-    remainder = @hand[1, 4]
-    remainder.each do |card|
-      @points +=1 if card[0] == 11 && card[1] == starter_suit
-    end
+    players_hand = @hand[1, 4]
+    @points += 1 if players_hand.include?([11, starter_suit])
   end
 end
-
-#tests
-hand = CribHand.new([[5, 'h'], [5, 's'], [5, 'c'], [5, 'd'], [11, 'h']])
-print hand.hand
-puts ' score should be 29'
-hand.score
-puts hand.points == 29
-
-hand = CribHand.new([[13, 'h'], [2, 's'], [4, 's'], [5, 'd'], [12, 's']])
-print hand.hand
-puts ' score should be 4'
-hand.score
-puts hand.points == 4
-
-hand = CribHand.new([[2, 'h'], [2, 's'], [2, 'c'], [3, 'd'], [4, 's']])
-print hand.hand
-puts ' score should be 15'
-hand.score
-puts hand.points == 15
-
-hand = CribHand.new([[2, 'h'], [3, 's'], [3, 'c'], [4, 'd'], [4, 's']])
-print hand.hand
-puts ' score should be 16'
-hand.score
-puts hand.points == 16
-
-hand = CribHand.new([[4, 'h'], [4, 's'], [5, 'c'], [5, 'd'], [6, 's']])
-print hand.hand
-puts ' score should be 24'
-hand.score
-puts hand.points == 24
