@@ -1,43 +1,133 @@
 require 'pry'
+require_relative 'deck'
 
-class CribHand
-  #hand given as an array, beginning with the starter card
-  #each card is an array with index 0 being the value and index 1 being the first letter of the suit
-  #face cards input as numerical values J, Q, K are 10, 12, 13, respectively
-  #example hand = CribHand.new([[1, 's'], [3, 'h'], [13, 'h'], [2, 'd'], [5, 'c']])
-  def initialize(hand)
-    @hand = hand
-    @values = @hand.map { |card| card[0] }
-    @suits = @hand.map { |card| card[1] }
+# CribHand inherits from Deck, creates a crib hand and provides a method to
+# score the crib hand.
+class CribHand < Deck
+  JACK = 11
+  MIN_COMBO_SIZE = 2
+  MAX_COMBO_SIZE = 5
+  MIN_COMBO_RUNS = 3
+  POINTS = {
+    fifteens: 2,
+    pairs: 2,
+    flush: 4,
+    starter: 1,
+    nob: 1
+  }.freeze
+  SUM_EQ_FIFTEEN = 15
+
+  def initialize
+    @deck = Deck.new
+    @starter = @deck.deal(1)
+    @hand = @deck.deal(4)
+    @full_hand ||= full_hand
+    @hand_combinations ||= hand_combinations
   end
 
-  def points
-    points = 0
+  def score
+    fifteen_twos + flush + nob + pairs + runs
+  end
 
-    # fifteen_twos
-    faces_to_tens = @values.map { |card| [11, 12, 13].include?(card) ? 10 : card }
-    hand_combinations = (2..5).flat_map { |size| faces_to_tens.combination(size).to_a }
-    points += 2 * hand_combinations.count { |card_combo| card_combo.sum == 15 }
+  private
 
-    # runs
-    hand_combinations = (3..5).flat_map { |size| @values.combination(size).to_a.sort }
-    run_list = hand_combinations.select { |card_combo| card_combo.each_cons(2).all? {|a, b| b == a + 1 } }
-    max_run_length = run_list.length > 0 ? run_list.max_by(&:length).length : 0
-    points +=  max_run_length * run_list.count { |run| run.length == max_run_length }
+  def hand_combinations
+    # returns all possible card combinations for a given hand
 
-    # pairs
-    hand_combinations = @values.combination(2).to_a
-    points += 2 * hand_combinations.count { |card_combo| card_combo.all? { |card| card == card_combo[0] } }
+    hand = @full_hand.map(&:points)
 
-    # flush
-    points += 4 if @suits[1, 4].all? { |card| card == @suits[1] }
-    points += 1 if @suits.all? { |card| card == @suits[0] }
+    combos = (MIN_COMBO_SIZE..MAX_COMBO_SIZE).flat_map do |size|
+      hand.combination(size).to_a
+    end
 
-    # nob
-    starter_suit = @suits[0]
-    players_hand = @hand[1, 4]
-    points += 1 if players_hand.include?([11, starter_suit])
+    combos.map(&:sort)
+  end
 
-    points
+  def fifteen_twos
+    # two points for each separate combination of two or more cards
+    # totalling exactly fifteen
+    # face cards count as 10
+
+    POINTS[:fifteens] * @hand_combinations.count do |card_combo|
+      card_combo.sum == SUM_EQ_FIFTEEN
+    end
+  end
+
+  def flush
+    # score 4 points when all 4 cards are of the same suit
+
+    suits_in_hand = @hand.map(&:suit)
+
+    if suits_in_hand.all? { |card| card == suits_in_hand.first }
+      flush_suit = suits_in_hand.first
+      points = POINTS[:flush]
+    end
+
+    points += POINTS[:starter] if flush_suit == @starter.first.suit
+
+    points || 0
+  end
+
+  def full_hand
+    # combines the starter card with the players hand
+
+    @starter + @hand
+  end
+
+  def max_run_length(run_list)
+    # determines the maximum run length from a list of run combinations
+
+    max_run = run_list.max_by(&:length)
+    if max_run
+      max_run.length
+    else
+      0
+    end
+  end
+
+  def nob
+    # score 1 point if player is holding
+    # the Jack with the same suit as the starter card
+
+    POINTS[:nob] * @hand.count do |card|
+      card.value == JACK && card.suit == @starter.first.suit
+    end
+  end
+
+  def pairs
+    # score 2 points for each unique pair combination
+
+    two_combos = @hand_combinations.select do |combo|
+      combo.length == MIN_COMBO_SIZE
+    end
+
+    POINTS[:pairs] * two_combos.count do |card_combo|
+      card_combo.all? { |card| card == card_combo.first }
+    end
+  end
+
+  def run?(card_combo)
+    # determines if a given card combo is a run and returns a boolean
+
+    card_combo.each_cons(2).all? do |current_card, next_card|
+      next_card == current_card + 1
+    end
+  end
+
+  def runs
+    # for runs of of 3 to 5 consecutive cards, the number of
+    # points awarded is equal to the length of the run
+
+    run_list = @hand_combinations.select do |card_combo|
+      run?(card_combo) && card_combo.length > MIN_COMBO_SIZE
+    end
+
+    max_run = max_run_length(run_list)
+
+    number_of_runs = run_list.count { |run| run.length == max_run }
+    max_run * number_of_runs
   end
 end
+
+crib_hand = CribHand.new
+puts crib_hand.score
