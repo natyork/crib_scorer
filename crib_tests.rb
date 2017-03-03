@@ -6,37 +6,37 @@ RSpec.describe CribHand do
 
     it "points should equal 29" do
       hand = CribHand.new([[5, 'h'], [5, 's'], [5, 'c'], [5, 'd'], [11, 'h']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 29
     end
     it "points should equal 4" do
       hand = CribHand.new([[13, 'h'], [2, 's'], [4, 's'], [5, 'd'], [12, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 4
     end
     it "points should equal 15" do
       hand = CribHand.new([[2, 'h'], [2, 's'], [2, 'c'], [3, 'd'], [4, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 15
     end
     it "points should equal 16" do
       hand = CribHand.new([[2, 'h'], [3, 's'], [3, 'c'], [4, 'd'], [4, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 16
     end
     it "points should equal 24" do
       hand = CribHand.new([[4, 'h'], [4, 's'], [5, 'c'], [5, 'd'], [6, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 24
     end
     it "points should equal 8" do
       hand = CribHand.new([[2, 'h'], [2, 's'], [2, 'c'], [3, 'd'], [3, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 8
     end
     it "points should equal 14" do
       hand = CribHand.new([[3, 'h'], [3, 's'], [4, 'c'], [5, 'd'], [6, 's']])
-      points = hand.points
+      points = hand.total_points
       expect(points).to eq 14
     end
   end
