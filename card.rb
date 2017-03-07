@@ -15,6 +15,8 @@ class Card
     if FACE_CARD.include? @value
       FACE_AS_TEN
     else
+      # since you have an attr_reader you could use that instead of the
+      # instance variable directly
       @value
     end
   end
