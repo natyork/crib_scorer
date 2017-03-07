@@ -3,6 +3,7 @@
 class Card
   attr_reader :value, :suit
 
+  JACK = 11
   FACE_CARD = [11, 12, 13].freeze
   FACE_AS_TEN = 10
 

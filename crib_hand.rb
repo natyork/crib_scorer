@@ -4,7 +4,6 @@ require_relative 'deck'
 # CribHand inherits from Deck, creates a crib hand and provides a method to
 # score the crib hand.
 class CribHand < Deck
-  JACK = 11
   MIN_COMBO_SIZE = 2
   MAX_COMBO_SIZE = 5
   MIN_COMBO_RUNS = 3
@@ -17,12 +16,12 @@ class CribHand < Deck
   }.freeze
   SUM_EQ_FIFTEEN = 15
 
-  def initialize
-    @deck = Deck.new
-    @starter = @deck.deal(1)
-    @hand = @deck.deal(4)
-    @full_hand ||= full_hand
-    @hand_combinations ||= hand_combinations
+  def initialize(starter, hand)
+   # @deck = Deck.new
+    @starter = starter
+    @hand = hand
+    @full_hand = @starter + @hand
+    @full_hand_values = @full_hand.map(&:value)
   end
 
   def score
@@ -31,10 +30,8 @@ class CribHand < Deck
 
   private
 
-  def hand_combinations
+  def hand_combinations(hand)
     # returns all possible card combinations for a given hand
-
-    hand = @full_hand.map(&:points)
 
     combos = (MIN_COMBO_SIZE..MAX_COMBO_SIZE).flat_map do |size|
       hand.combination(size).to_a
@@ -48,7 +45,9 @@ class CribHand < Deck
     # totalling exactly fifteen
     # face cards count as 10
 
-    POINTS[:fifteens] * @hand_combinations.count do |card_combo|
+    hand = @full_hand.map(&:points)
+
+    POINTS[:fifteens] * hand_combinations(hand).count do |card_combo|
       card_combo.sum == SUM_EQ_FIFTEEN
     end
   end
@@ -66,12 +65,6 @@ class CribHand < Deck
     points += POINTS[:starter] if flush_suit == @starter.first.suit
 
     points || 0
-  end
-
-  def full_hand
-    # combines the starter card with the players hand
-
-    @starter + @hand
   end
 
   def max_run_length(run_list)
@@ -97,7 +90,7 @@ class CribHand < Deck
   def pairs
     # score 2 points for each unique pair combination
 
-    two_combos = @hand_combinations.select do |combo|
+    two_combos = hand_combinations(@full_hand_values).select do |combo|
       combo.length == MIN_COMBO_SIZE
     end
 
@@ -118,7 +111,7 @@ class CribHand < Deck
     # for runs of of 3 to 5 consecutive cards, the number of
     # points awarded is equal to the length of the run
 
-    run_list = @hand_combinations.select do |card_combo|
+    run_list = hand_combinations(@full_hand_values).select do |card_combo|
       run?(card_combo) && card_combo.length > MIN_COMBO_SIZE
     end
 
@@ -128,6 +121,3 @@ class CribHand < Deck
     max_run * number_of_runs
   end
 end
-
-crib_hand = CribHand.new
-puts crib_hand.score
