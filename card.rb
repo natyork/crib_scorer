@@ -3,7 +3,6 @@
 class Card
   attr_reader :value, :suit
 
-  JACK = 11
   FACE_CARD = [11, 12, 13].freeze
   FACE_AS_TEN = 10
 
@@ -12,11 +11,15 @@ class Card
     @suit = suit
   end
 
+  def jack?
+    value == 11
+  end
+
   def points
-    if FACE_CARD.include? @value
+    if FACE_CARD.include? value
       FACE_AS_TEN
     else
-      @value
+      value
     end
   end
 end

@@ -54,5 +54,12 @@ RSpec.describe CribHand do
       let(:expected_points) { 14 }
       it { expect(subject).to eq expected_points }
     end
+
+    context "points add to 11" do
+      let(:starter) { [Card.new(3, 'spades')] }
+      let(:hand) { [Card.new(12, 'hearts'), Card.new(4, 'hearts'), Card.new(2, 'hearts'), Card.new(6, 'hearts')] }
+      let(:expected_points) { 11 }
+      it { expect(subject).to eq expected_points }
+    end
   end
 end

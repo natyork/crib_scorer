@@ -11,13 +11,12 @@ class CribHand < Deck
     fifteens: 2,
     pairs: 2,
     flush: 4,
-    starter: 1,
+    starter: 5,
     nob: 1
   }.freeze
-  SUM_EQ_FIFTEEN = 15
+  SCORABLE_COMBINATION_SUM = 15
 
   def initialize(starter, hand)
-   # @deck = Deck.new
     @starter = starter
     @hand = hand
     @full_hand = @starter + @hand
@@ -30,14 +29,12 @@ class CribHand < Deck
 
   private
 
-  def hand_combinations(hand)
+  def hand_combinations
     # returns all possible card combinations for a given hand
 
-    combos = (MIN_COMBO_SIZE..MAX_COMBO_SIZE).flat_map do |size|
-      hand.combination(size).to_a
+    @hand_combinations ||= (MIN_COMBO_SIZE..MAX_COMBO_SIZE).flat_map do |size|
+      @full_hand.combination(size).to_a
     end
-
-    combos.map(&:sort)
   end
 
   def fifteen_twos
@@ -45,26 +42,23 @@ class CribHand < Deck
     # totalling exactly fifteen
     # face cards count as 10
 
-    hand = @full_hand.map(&:points)
-
-    POINTS[:fifteens] * hand_combinations(hand).count do |card_combo|
-      card_combo.sum == SUM_EQ_FIFTEEN
+    n_scoring_combinations = hand_combinations.count do |card_combo|
+      card_points = card_combo.map(&:points)
+      card_points.sum == SCORABLE_COMBINATION_SUM
     end
+
+    POINTS[:fifteens] * n_scoring_combinations
   end
 
   def flush
     # score 4 points when all 4 cards are of the same suit
 
     suits_in_hand = @hand.map(&:suit)
+    flush_suit = suits_in_hand.first
 
-    if suits_in_hand.all? { |card| card == suits_in_hand.first }
-      flush_suit = suits_in_hand.first
-      points = POINTS[:flush]
-    end
+    return 0 unless suits_in_hand.all? { |card| card == flush_suit }
 
-    points += POINTS[:starter] if flush_suit == @starter.first.suit
-
-    points || 0
+    flush_suit == @starter.first.suit ? POINTS[:starter] : POINTS[:flush]
   end
 
   def max_run_length(run_list)
@@ -82,27 +76,31 @@ class CribHand < Deck
     # score 1 point if player is holding
     # the Jack with the same suit as the starter card
 
-    POINTS[:nob] * @hand.count do |card|
-      card.value == JACK && card.suit == @starter.first.suit
+    return 0 if @hand.none? do |card|
+      card.jack? && card.suit == @starter.first.suit
     end
+
+    POINTS[:nob]
   end
 
   def pairs
     # score 2 points for each unique pair combination
 
-    two_combos = hand_combinations(@full_hand_values).select do |combo|
-      combo.length == MIN_COMBO_SIZE
+    two_combos = hand_combinations.select do |combo|
+      combo.length == MIN_COMBO_SIZE &&
+        combo.map(&:value).all? { |card| card == combo.first.value }
     end
 
-    POINTS[:pairs] * two_combos.count do |card_combo|
-      card_combo.all? { |card| card == card_combo.first }
-    end
+    POINTS[:pairs] * two_combos.length
   end
 
   def run?(card_combo)
     # determines if a given card combo is a run and returns a boolean
+    return if card_combo.length <= MIN_COMBO_SIZE
 
-    card_combo.each_cons(2).all? do |current_card, next_card|
+    card_values = card_combo.map(&:value).sort
+
+    card_values.each_cons(2).all? do |current_card, next_card|
       next_card == current_card + 1
     end
   end
@@ -111,8 +109,8 @@ class CribHand < Deck
     # for runs of of 3 to 5 consecutive cards, the number of
     # points awarded is equal to the length of the run
 
-    run_list = hand_combinations(@full_hand_values).select do |card_combo|
-      run?(card_combo) && card_combo.length > MIN_COMBO_SIZE
+    run_list = hand_combinations.select do |card_combo|
+      run?(card_combo)
     end
 
     max_run = max_run_length(run_list)
